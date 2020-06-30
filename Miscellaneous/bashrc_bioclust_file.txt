@@ -1,0 +1,109 @@
+# Changing directory
+cd /data/biocomp/bahin/biocomp-mb-scripts
+
+# Changing language
+#export LANG=en_US.utf8
+
+# Entering once the ssh passphrase for the session
+if [ -z "$SSH_AUTH_SOCK" ] ; then
+	eval `ssh-agent -s`
+	ssh-add
+fi
+
+# Killing the agent when logging out
+trap 'test -n "$SSH_AGENT_PID" && eval `/usr/bin/ssh-agent -k`' 0
+ 
+#Customizing the prompt
+blue='\e[1;34m'
+green='\e[1;32m'
+end_color='\e[m'
+export PS1="\[$blue\][\h\[$end_color\] \[$green\]\W\[$end_color\] \[$blue\]\A]$\[$end_color\] "
+
+# Aliases
+alias smartgit='/projects/biocomp/smartgit705/bin/smartgit.sh'
+alias DB_condor_read='psql -h pg1.biologie.ens.fr -U condor_history_read pg_condor_history'
+alias DB_condor='psql -h pg1.biologie.ens.fr -U condor_history pg_condor_history'
+alias ll="ls -lhG --color"
+alias rm='rm -i'
+alias h='head -5'
+alias h1='head -1'
+alias h2='head -2'
+alias grep='grep --color=auto'
+alias col="awk '{if (NR % 2){printf \"\033[48;5;63m\"\$0\"\033[0m\n\"}else{print \$0}}'"
+#alias col="sed -e 'N;s/\(.*\)\n\(.*\)/\x1b[48;5;189m\1\x1b[0m\n\2/'"
+alias gv='egrep -v "^#|^@"'
+
+# Condor aliases
+alias crm="condor_rm"
+alias crmb="condor_rm bahin"
+alias cq="condor_q"
+alias cqga="condor_q -g -allusers"
+alias cqr="condor_q -r -nobatch -allusers"
+alias cqgr="condor_q -g -r -nobatch -allusers"
+alias cqba="condor_q -g -better-analyze -allusers"
+alias cs="condor_status"
+alias csa="echo -e '------------------------------------------------------------------\nName       || Cpus  | Avail | Util% || Memory   | Avail  | Util% |\n------------------------------------------------------------------'; condor_status -constraint 'PartitionableSlot =?= TRUE' -format '%15s ||' Name -format '%6d |' TotalSlotCpus -format '%6d |' Cpus -format '%5d%% ||' '((TotalSlotCpus - Cpus) / (TotalSlotCpus * 1.0)) * 100' -format '%8dG |' '(TotalSlotMemory / 1024)' -format '%6dG |' '(Memory / 1024)' -format '%5d%% |' '((TotalSlotMemory - Memory) / (TotalSlotMemory * 1.0)) * 100' -format '\n' TRUE | sed 's/slot1@\([^.]*\).bioclust.biologie.ens.fr/\1/g'; echo '------------------------------------------------------------------';"
+alias css="condor_status -submitters"
+alias cup="condor_userprio"
+alias cupa="condor_userprio -allusers"
+alias ch="condor_history"
+alias csi='condor_submit -i /data/biocomp/bahin/biocomp-mb-scripts/Condor/Interactive_jobs/interactive.sub'
+alias cq_loop="watch -n 1 condor_q"
+alias rmcond="rm -f *log *err *out"
+#alias crestart="condor_q -g -allusers -l | grep -i numjobstart | sort | uniq -c;cqga -l | egrep -i '^owner|^numjobstart' | awk '{if(NR%2){line=$0}else{print line'\t'$0}}' | sed 's/NumJobStarts = \([0-9]\)\tOwner = "\([^"]*\)"/\2\t\1/g' | awk "$2 > "' | sort | uniq -c | awk '{print $2"\t"$3 " times\tcount="$1}" | column -t'
+alias crestart=". /data/biocomp/bahin/biocomp-mb-scripts/Scripts/crestart.sh"
+alias lastYearJobs="doy=\$(date +%j); cqga -nobatch | awk '((\$3 ~ /12/) || (\$3 ~ /11/)) && (\$6 == \"R\")' | sed 's/\([^ ]*\) *\([^ ]*\) *\([^ ]*\) *[^ ]* *\([^+]*\).*/\1\t\2\t\3\t\4/g' | awk -v doy=\"\$doy\" '\$4 > doy' | wc -l"
+
+# Condor related functions
+concLim () { cqga -l "$@" | grep -i ^conc | sort | uniq -c; }
+
+# Path shortcuts
+export DATA="/data/biocomp/bahin/biocomp-mb-scripts/"
+export PROJECTS='/projects/biocomp/'
+export ALFA_DIR="/projects/biocomp/Projects/ALFA"
+
+# PYTHONPATH
+#export PYTHONPATH=$PYTHONPATH:/users/biocomp/bahin/python_libs/lib/python2.7/site-packages/
+
+# PERL5LIB
+export PERL5LIB=/users/biocomp/bahin/perl_libs/lib/perl5/
+
+# Grep colors
+export GREP_COLOR='1;33'
+
+# Adding thousands separators to line count
+wl() {
+	# The function can be used alone with a parameter or within a piped command.
+	# It is not very good with several files, better use 'wc -l'.
+	if [[ $# -eq 0 ]]; then #Function called with a file as parameter
+		nb=$(wc -l)
+	elif [[ $# -eq 1 ]]; then #Function called within a piped command
+		nb=$(wc -l $1 | cut -f1 -d' ')
+	else #Function called with a list of file (not perfect)
+		echo $(wc -l $*) | sed 's/\([0-9]* [^ ]*\) \([0-9]* [^ ]*\)/\1\n\2/g' | sed 's/\([0-9]* [^ ]*\) \([0-9]* [^ ]*\)/\1\n\2/g'
+		return 0
+	fi
+
+	# Adding thousand separators within the line count number
+	new=''
+	for ((i=${#nb};i>0;i-=3)) do
+		if [[ $i -le 3 ]]; then #When there is still 3 figures or less
+			new=${nb:0:i}$new
+		else
+			new='.'${nb:$(($i-3)):3}$new
+		fi
+	done
+
+	# Printing the results
+	if [[ $# -eq 0 ]]; then
+		echo $new
+	else
+		echo $new $(wc -l $1 | cut -f2 -d' ')
+	fi
+}
+
+# Conda
+. /users/biocomp/bahin/miniconda3/etc/profile.d/conda.sh
+
+# added by Miniconda3 installer
+export PATH="/users/biocomp/bahin/miniconda3/bin:$PATH"
