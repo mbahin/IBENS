@@ -17,7 +17,6 @@ from dask import dataframe as dd
 from dask.multiprocessing import get
 from dask.diagnostics import ProgressBar
 # Loading modules
-sys.path.append("/data/biocomp/bahin/qPCR/qPCRquantification/")
 import qPCR_functions
 
 ###################################################################################################
@@ -160,15 +159,6 @@ def Hill_with_bump(x, minimum, maximum, c, d, bump1, bump2):
     except FloatingPointError:
         return np.repeat([np.nan], len(x))
 
-""" NOT THE GOOD VERSION??
-def modelled_fluo(row, equation):  ## WARNING: new format with bump params first, not adapted yet
-    # Getting the fitting parameters except the 2 first that are the min and max (we'll set them to 0 and 1) and the 2 lasts that are the bump parameters (we'll set them to 0 to remove it)
-    params = ["P_" + letter + "_final_" + equation.__name__ for letter in list(string.ascii_lowercase)[2:equation.__code__.co_argcount - 3]]
-    args = [0, 1] + row[params].values.tolist() + [0, 0]
-    # Running the fitting equation with these parameters
-    return equation(np.arange(40), *args)
-"""
-
 
 def residualSumSquare(parameter_rss, row, equation):
     ''' Computes the residual sum square.
@@ -185,21 +175,6 @@ def residualSumSquare(parameter_rss, row, equation):
         return np.sum((np.array(row[cycles_col]) - equation(np.arange(40), *parameter_rss))**2)
     except (OverflowError, FloatingPointError):
         return np.nan
-
-"""
-def report_IPS(file, IPS, model, mode="append"):
-    ''' Function to write the chosen IPS. '''
-    if mode == "create":
-        with open(file, "w") as IPS_file:
-            IPS_file.write("## HiFit model " + model + "\n")
-            for ip in IPS:
-                IPS_file.write(str(['{:.3f}'.format(i) for i in ip]) + "\n")
-    else:
-        with open(file, "a") as IPS_file:
-            IPS_file.write("## HiFit model " + model + "\n")
-            for ip in IPS:
-                IPS_file.write(str(['{:.3f}'.format(i) for i in ip]) + "\n")
-"""
 
 ###################################################################################################
 # HiFit model
@@ -318,9 +293,6 @@ def HiFitModel(data, init_size, equation, nb_init_param_sets, stable_test, nb_pa
     # Removing the initial "F" and final "_mod" of modelled cycles column names
     #mod_fluo["Cycle"] = mod_fluo.apply(lambda row: int(row["Cycle"][1:-4]), axis=1)
 
-    # Storing the results
-    #mod_fluo.to_csv("/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/mod_fluo.tsv", sep="\t")
-
     data.to_csv(output_filepath + "/final_data." + equation.__name__ + ".tsv", sep="\t", index=False)
     return data, IPS_file
 
@@ -337,7 +309,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", "--Fluidigm_file", dest="Fluidigm_file", help="Fluidigm raw output file")
     parser.add_argument("-f2", "--intermediate_file", dest="HiFit_intermediate_file", help="HiFit intermediate file (data read from Fluidigm raw file but not yet gathered)")
-    parser.add_argument("-d", "--data", type=str, dest="data_file", default="/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/research_plate.tsv", help="Path to the input data file to analyse.", metavar="FILE")
+    parser.add_argument("-d", "--data", type=str, dest="data_file", default="Data/plate2.tsv", help="Path to the input data file to analyse.", metavar="FILE")
     parser.add_argument("-b", "--bump", action="store_true", dest="bump", help="Whether the bump hasn't yet been removed from the data.")
     parser.add_argument("-r", "--research_plate", action="store_true", dest="research_plate", help="Whether this is THE research plate.")
     parser.add_argument("-m", "--model", dest="model", nargs="+", required=True, help="Model to use for the fitting.")
@@ -349,7 +321,7 @@ if __name__ == "__main__":
     parser.add_argument("-l", "--little-test", action="store_true", dest="little_test", help="Flag to specify that we use the little test.")
     parser.add_argument("-p", "--nb_processors", type=int, dest="nb_processors", default=70, help="Number of processors used by the script.(default=4)")
     parser.add_argument("--IPS_file", dest="IPS_file", default="", help="Providing an IPS file to ditch the first phase")
-    parser.add_argument("-o", "--output", dest="output", default="/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/", help="Output filepath")
+    parser.add_argument("-o", "--output", dest="output", help="Output filepath")
     options = parser.parse_args()
 
     # Setting fixed parameters for the stable test
@@ -419,7 +391,7 @@ if __name__ == "__main__":
     # Setting water samples
     if options.research_plate:
         water_samples = [12, 24, 36, 48, 60, 72, 84, 96]
-    else:  # QV plate
+    else:  # Plate1
         water_samples = [1, 13, 25, 37, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84]
 
     #################################################
@@ -432,9 +404,9 @@ if __name__ == "__main__":
     if options.HiFit_intermediate_file:
         # Setting N0 file
         if options.research_plate:
-            N0_file = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/PS1_PC1_N0.tsv"
-        else:  # QV plate
-            N0_file = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/QV_plate/QV_plate.PS1_N0.tsv"
+            N0_file = "Data/plate2.PS1_PC1_N0.tsv"
+        else:  # Plate1
+            N0_file = "Data/plate1.PS1_N0.tsv"
         # Loading fluo and metadata
         data = qPCR_functions.gather_data(options.HiFit_intermediate_file, options.sample_size, water_samples, options.output, N0_file)
         data.to_csv(options.data_file, sep="\t", index=False)

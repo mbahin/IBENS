@@ -187,22 +187,22 @@ if __name__ == "__main__":
 
     # Setting the arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("-p", "--plate", dest="plate", choices=["research", "QV"], help="The input plate to analyze.")
+    parser.add_argument("-p", "--plate", dest="plate", choices=["plate1", "plate2"], help="The input plate to analyze.")
     options = parser.parse_args()
 
     # Setting data path according to the plate
-    if options.plate == "research":
-        input = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/final_data.total.REF.tsv"
+    if options.plate == "plate2":
+        input = "Data/plate2.final_data.total.tsv"
         raw_data = pd.read_csv(input, sep="\t", index_col=0)
         data = raw_data.loc[(raw_data.Sigmoid_curve) & (raw_data.Pre_amplification == 0) & (raw_data.Gene != "Notch1a")
                             & ~((raw_data.Gene == "Crabp2a") & (raw_data.S_or_C == "PC"))
                             & ~((raw_data.Gene == "BMP4") & (raw_data.S_or_C == "PC")), :].copy()
-        DL_input = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/DeepLearning/DL_predictions.research_plate.REF.tsv"
-    else:  # QV plate
-        input = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/QV_plate/final_data.total.REF.tsv"
+        DL_input = "Data/DL_predictions.plate2.tsv"
+    else:  # Plate1
+        input = "Data/plate1.final_data.total.tsv"
         raw_data = pd.read_csv(input, sep="\t", index_col=0)
         data = raw_data.loc[raw_data.Sigmoid_curve & raw_data.Condition.isin(["PS" + str(x) for x in range(1, 13)] + ["PC" + str(x) for x in range(1, 13)]), :].copy()
-        DL_input = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/DeepLearning/DL_predictions.QV_plate.REF.tsv"
+        DL_input = "Data/DL_predictions.plate1.tsv"
 
     # Filtering out gene/condition without the 6 replicates showing a sigmoid curve
     data = data.groupby(["Gene", "Condition"]).filter(lambda row: row["Sample"].count() == 6)
@@ -251,7 +251,7 @@ if __name__ == "__main__":
                 final = pairs.copy()
             else:
                 final = pd.concat([final, pairs], join="inner")
-        final.to_csv("/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/Cq_method.pairs.ratio_diff.tsv", sep="\t")
+        final.to_csv("Data/Cq_method.pairs.ratio_diff.tsv", sep="\t")
         """
         # Computing ref gene linear regression parameters
         ref_gene = "Bactine2"

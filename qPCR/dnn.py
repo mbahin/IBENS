@@ -92,8 +92,8 @@ if __name__ == "__main__":
 
     # Setting the arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config1", action="store_true", dest="config1", help="Research plate is used for training/testing and QV plate for validation.")
-    parser.add_argument("--config2", action="store_true", dest="config2", help="QV plate is used for training/testing and research plate for validation.")
+    parser.add_argument("--config1", action="store_true", dest="config1", help="Plate2 is used for training/testing and plate1 for validation.")
+    parser.add_argument("--config2", action="store_true", dest="config2", help="Plate1 is used for training/testing and plate2 for validation.")
     options = parser.parse_args()
 
     # Setting variables
@@ -102,14 +102,14 @@ if __name__ == "__main__":
     # Setting gene/condition lists
     test_gene_condition = [("FGF8a", "PS"), ("Rarab", "PS"), ("Hoxd4a", "PS")]
     #test_gene_condition = [("FGF8a", "PS"), ("Her7", "PC"), ("Crabp2a", "PS")]  # Only found test set where val_loss > loss from the beginning for config1
-    # Loading QV dataset
-    QV_filepath = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/QV_plate/final_data.Gompertz_with_bump.REF.tsv"
+    # Loading plate1 dataset
+    QV_filepath = "Data/plate1.final_data.Gompertz_with_bump.tsv"
     QV_df = pd.read_csv(QV_filepath, sep="\t", usecols=["WellID", "Sigmoid_curve", "Condition", "Gene", "Theoretical_N0_log"] + cycles_col)
     QV_df = QV_df.loc[(QV_df.Sigmoid_curve) & QV_df.Condition.isin(["PS" + str(x) for x in range(1, 13)]), :].copy()
     # Filtering out gene/condition without the 6 replicates showing a sigmoid curve
     QV_df = QV_df.groupby(["Gene", "Condition"]).filter(lambda row: row["WellID"].count() == 6).copy()
     # Loading research dataset
-    research_filepath = "/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/final_data.Gompertz_with_bump.REF.tsv"
+    research_filepath = "Data/Plate2.final_data.Gompertz_with_bump.REF.tsv"
     research_df = pd.read_csv(research_filepath, sep="\t", usecols=["WellID", "Sigmoid_curve", "Pre_amplification", "Condition", "Gene", "Theoretical_N0_log"] + cycles_col)
     research_df = research_df.loc[(research_df.Sigmoid_curve) & (research_df.Pre_amplification == 0), :].copy()
     # Filtering out gene/condition without the 6 replicates showing a sigmoid curve
@@ -170,6 +170,6 @@ if __name__ == "__main__":
     display_plot(model, x_val, y_val, my, sy, gene_val)
     # Reporting the predicted values
     if options.config1:
-        np.savetxt("/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/DeepLearning/DL_predictions.QV_plate.tsv", np.column_stack((wellID_vp, back_convert(model.predict(x_val).T[0], my, sy))), delimiter="\t", fmt="%s")
+        np.savetxt("DL_predictions.plate1.tsv", np.column_stack((wellID_vp, back_convert(model.predict(x_val).T[0], my, sy))), delimiter="\t", fmt="%s")
     else:  # Config2
-        np.savetxt("/data/biocomp/bahin/qPCR/Research_plate/Fixed_keys/DeepLearning/DL_predictions.research_plate.tsv", np.column_stack((wellID_vp, back_convert(model.predict(x_val).T[0], my, sy))), delimiter="\t", fmt="%s")
+        np.savetxt("DL_predictions.plate2.tsv", np.column_stack((wellID_vp, back_convert(model.predict(x_val).T[0], my, sy))), delimiter="\t", fmt="%s")

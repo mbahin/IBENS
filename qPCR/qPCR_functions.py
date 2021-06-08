@@ -18,7 +18,7 @@ genes = ["BMP4", "Bactine2", "Crabp2a", "Cyp26a1", "DeltaC", "DeltaD", "FGF8a", 
 def decorticate_condition(condition):
     ''' To decompose the condition into pre-amplification cycle number, PS or PC and dilution factor. '''
     match = re.match(r'((1[048])C_)?(P[CS])([1-9][0-2]?)', condition)
-    # For the research plate, there will always be a match but not for QV plate
+    # For the plate2, there will always be a match but not for plate1
     if match:
         # Checking if there was pre-amplification cycles
         if not match.group(2):
@@ -32,7 +32,7 @@ def decorticate_condition(condition):
 
 def compute_N0(row, molecules):
     # If the well is water or if it was pre-amplified, then there is no theoretical N0
-    if (row.Dilution == 12) or (row.Pre_amplification != 0):  # Warning, in research plate, the 12th dilution are water samples, not in QV plate but always flat curves so it's ok
+    if (row.Dilution == 12) or (row.Pre_amplification != 0):  # Warning, in plate2, the 12th dilution are water samples, not in plate2 but always flat curves so it's ok
         return np.nan
     else:
         # Applying the dilution factor to the known starting molecule quantity
@@ -52,7 +52,7 @@ def gather_data(filepath, sample_size, water_samples, output_filepath, N0_file):
     # Loading intermediate data
     df = pd.read_csv(filepath, sep="\t", nrows=sample_size)
 
-    # Defining metadata (Warning: in QV plate, Preamp and Dilution are float, probably because of NaNs)
+    # Defining metadata (Warning: in plate1, Preamp and Dilution are float, probably because of NaNs)
     df[["Pre_amplification", "S_or_C", "Dilution"]] = df.apply(lambda row: decorticate_condition(row.Condition), axis=1, result_type="expand")
 
     # Discriminating and discarding flat curves from the dataset
@@ -60,7 +60,7 @@ def gather_data(filepath, sample_size, water_samples, output_filepath, N0_file):
     # Determining the rising cycle
     df["Rising_cycle"] = df.apply(lambda row: 0 if not row["Sigmoid_curve"] else area_under_chord_pd(row[cycles_col], 11)[1], axis=1)
 
-    # Loading the theoretical N0 for PS1 (and PC1 if research plate)
+    # Loading the theoretical N0 for PS1 (and PC1 if plate2)
     molecules = pd.read_csv(N0_file, sep="\t", header=0, index_col=0)
     # Computing the theoretical N0
     df["Theoretical_N0"] = df.apply(lambda row: compute_N0(row, molecules), axis=1)
